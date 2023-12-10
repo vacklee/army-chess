@@ -1,0 +1,6 @@
+$mapRatio: calc(1130 / 760 * 100%);
+$chars: A,B,C,D,E,F,G,H,I,J,K,L,a,b,c,d,e,f,g,h,i,j,k,l;
+
+@function unit($p) {
+  @return calc($p / 760 * 100%);
+}
