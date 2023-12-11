@@ -12,7 +12,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 
 const props = defineProps({
   info: {
@@ -21,7 +21,12 @@ const props = defineProps({
   }
 })
 
+const emits = defineEmits(['inited'])
 const isBlue = computed(() => /^[a-l]$/.test(props.info.char))
+
+onMounted(() => {
+  emits('inited')
+})
 </script>
 
 <style lang="scss" module>

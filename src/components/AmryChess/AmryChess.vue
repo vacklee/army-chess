@@ -9,13 +9,33 @@
         :class="$style[`chess_point_${item.x}_${item.y}`]"
         :info="item"
       ></Chess>
+      <template v-if="animate">
+        <div :class="[
+          $style.chess_border,
+          $style[`chess_point_${animate.start[0]}_${animate.start[1]}`]]"
+        />
+        <div :class="[
+          $style.chess_border,
+          $style[`chess_point_${animate.end[0]}_${animate.end[1]}`]]"
+        />
+        <Chess
+          :class="[
+            $style[`chess_point_${animate.chess.x}_${animate.chess.y}`],
+          ]"
+          :info="animate.chess"
+          :style="`transition: ${animate.transition}`"
+          @inited="animate.onInit"
+          @transitionend="animate.callback"
+        />
+      </template>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import Chess from './Chess.vue';
+import { parseChar } from './helper'
 
 const props = defineProps({
   fin: {
@@ -48,13 +68,66 @@ const chesses = computed(() => {
     chesses.push({
       x: index % 5,
       y: Math.floor(index / 5),
-      char,
-      flag
+      ...parseChar(char, flag)
     })
 
     index += 1
   }
   return chesses
+})
+
+const animate = ref(null)
+const playAnimate = (char, startPoint, ...endPoints) => {
+  const chess = parseChar(char)
+  const createAnimate = (start, end, ends) => {
+    let index = 0
+
+    const getTransition = () => {
+      const duration = 0.618 / ends.length
+      const func = (() => {
+        if (ends.length === 1) {
+          return 'ease-in-out'
+        }
+        if (index === 0) {
+          return 'ease-in'
+        }
+        if (index === ends.length - 1) {
+          return 'ease-out'
+        }
+        return 'linear'
+      })()
+      return `all ${duration}s ${func}`
+    }
+    
+    const change = (node) => {
+      if (index < ends.length) {
+        setTimeout(() => {
+          node.chess.x = ends[index][0]
+          node.chess.y = ends[index][1]
+          node.transition = getTransition()
+          index += 1
+        }, 0)
+      }
+    }
+
+    animate.value = {
+      chess: {
+        x: start[0],
+        y: start[1],
+        ...chess,
+      },
+      end,
+      start,
+      transition: getTransition(),
+      onInit: () => change(animate.value),
+      callback: () => change(animate.value)
+    }
+  }
+  createAnimate(startPoint, endPoints[endPoints.length - 1], endPoints)
+}
+
+defineExpose({
+  playAnimate
 })
 </script>
 
@@ -90,6 +163,12 @@ const chesses = computed(() => {
     left: unit(80);
     width: unit(600);
     height: unit(1010);
+  }
+
+  &_border {
+    width: unit(103);
+    height: unit(60);
+    border: 2px solid red;
   }
 }
 
