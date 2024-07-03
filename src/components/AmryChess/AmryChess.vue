@@ -33,7 +33,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import Chess from './Chess.vue';
 import { parseChar } from './helper'
 
@@ -77,53 +77,63 @@ const chesses = computed(() => {
 })
 
 const animate = ref(null)
-const playAnimate = (char, startPoint, ...endPoints) => {
-  const chess = parseChar(char)
-  const createAnimate = (start, end, ends) => {
-    let index = 0
-
-    const getTransition = () => {
-      const duration = 0.618 / ends.length
-      const func = (() => {
-        if (ends.length === 1) {
-          return 'ease-in-out'
-        }
-        if (index === 0) {
-          return 'ease-in'
-        }
-        if (index === ends.length - 1) {
-          return 'ease-out'
-        }
-        return 'linear'
-      })()
-      return `all ${duration}s ${func}`
-    }
-    
-    const change = (node) => {
-      if (index < ends.length) {
-        setTimeout(() => {
-          node.chess.x = ends[index][0]
-          node.chess.y = ends[index][1]
-          node.transition = getTransition()
-          index += 1
-        }, 0)
-      }
-    }
-
-    animate.value = {
-      chess: {
-        x: start[0],
-        y: start[1],
-        ...chess,
-      },
-      end,
-      start,
-      transition: getTransition(),
-      onInit: () => change(animate.value),
-      callback: () => change(animate.value)
-    }
+const playAnimate = async (char, startPoint, ...endPoints) => {
+  if (animate.value) {
+    animate.value = null
+    await nextTick()
   }
-  createAnimate(startPoint, endPoints[endPoints.length - 1], endPoints)
+
+  const chess = parseChar(char)
+  const createAnimate = async (start, end, ends) => {
+    await new Promise((resolve) => {
+      let index = 0
+
+      const getTransition = () => {
+        const duration = 0.618 / ends.length
+        const func = (() => {
+          if (ends.length === 1) {
+            return 'ease-in-out'
+          }
+          if (index === 0) {
+            return 'ease-in'
+          }
+          if (index === ends.length - 1) {
+            return 'ease-out'
+          }
+          return 'linear'
+        })()
+        return `all ${duration}s ${func}`
+      }
+      
+      const change = (node) => {
+        if (index < ends.length) {
+          setTimeout(() => {
+            node.chess.x = ends[index][0]
+            node.chess.y = ends[index][1]
+            index += 1
+            node.transition = getTransition()
+          }, 0)
+        } else {
+          resolve()
+        }
+      }
+
+      animate.value = {
+        chess: {
+          x: start[0],
+          y: start[1],
+          ...chess,
+        },
+        end,
+        start,
+        transition: getTransition(),
+        onInit: () => change(animate.value),
+        callback: () => change(animate.value)
+      }
+    })
+  }
+
+  await createAnimate(startPoint, endPoints[endPoints.length - 1], endPoints)
 }
 
 defineExpose({
